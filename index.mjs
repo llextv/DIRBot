@@ -244,7 +244,7 @@ async function sendVocal(voiceChannelId, type, data){
       text = `Infos Traffic. Information importante de la part d'un patrouilleur. ${data.titre}. ${data.message}`;
       break;
     case "accident":
-      text = `Infos Traffic. Un patrouilleur nous a rapporter un accident au niveau de ${data.lieu}. Les secours sont en cours d’intervention. Ralentissements importants à prévoir. Information complémentaire: ${data.autre_infos} Merci de votre vigilance. Et bonne route sur les ondes du LS 107.7`;
+      text = `Infos Traffic. Un patrouilleur nous a rapporter un accident au niveau de ${data.lieu}. Les secours sont en cours d’intervention. Ralentissements importants à prévoir. Information complémentaire: ${data.autre_infos}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
       break;
     case "travaux":
       text = `Infos Traffic. La DIR vous informe de travaux sur la voie au niveau de ${data.lieu}. Nous vous demandons de prendre la déviation: ${data.deviation}. La durée des travaux est estimé a ${data.duree}. Information complémentaire: ${data.autre_infos} Merci de votre vigilance. Et bonne route sur les ondes du LS 107.7`;
@@ -256,6 +256,7 @@ async function sendVocal(voiceChannelId, type, data){
 
   const textOral = new gTTS(text, 'fr');
   const filePath = './text.mp3';
+  const introPath = './intro.mp3';
   textOral.save(filePath, async function (err) {
       if (err) return console.error(err);
   
@@ -265,25 +266,27 @@ async function sendVocal(voiceChannelId, type, data){
         adapterCreator: channel.guild.voiceAdapterCreator,
       });
   
-      const player = createAudioPlayer();
-  
       const resource = createAudioResource(filePath);
-  
-      player.play(resource);
+      const intro = createAudioResource(introPath);
+
+      const player = createAudioPlayer();
       connection.subscribe(player);
-  
+          
+      player.play(intro);
+          
+      player.once(AudioPlayerStatus.Idle, () => {
+        player.play(resource);
+      });
+      
       player.on(AudioPlayerStatus.Idle, () => {
-        console.log('Lecture terminée');
         connection.destroy();
         fs.unlinkSync(filePath);
-        //process.exit(0);
       });
-  
+      
       player.on('error', error => {
         console.error(`Erreur audio: ${error.message}`);
         connection.destroy();
         fs.unlinkSync(filePath);
-        //process.exit(1);
       });
     });
 }
