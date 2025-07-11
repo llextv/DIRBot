@@ -266,7 +266,7 @@ async function sendVocal(voiceChannelId, type, data){
         adapterCreator: channel.guild.voiceAdapterCreator,
       });
   
-      const resource = createAudioResource(filePath);
+      const message = createAudioResource(filePath);
       const intro = createAudioResource(introPath);
 
       const player = createAudioPlayer();
@@ -274,21 +274,26 @@ async function sendVocal(voiceChannelId, type, data){
           
       player.play(intro);
           
-      player.once(AudioPlayerStatus.Idle, () => {
-        player.play(resource);
-      });
-      
+      let hasPlayedIntro = false;
+
       player.on(AudioPlayerStatus.Idle, () => {
-        connection.destroy();
-        fs.unlinkSync(filePath);
+        if (!hasPlayedIntro) {
+          hasPlayedIntro = true;
+          player.play(message);
+        } else {
+          connection.destroy();
+          fs.unlinkSync(filePath);
+        }
       });
-      
+    
       player.on('error', error => {
         console.error(`Erreur audio: ${error.message}`);
         connection.destroy();
         fs.unlinkSync(filePath);
       });
-    });
+    
+      player.play(intro);
+  });
 }
 
 function sendText(type, data, member){
