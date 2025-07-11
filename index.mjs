@@ -568,7 +568,7 @@ client.on(Events.InteractionCreate, async interaction => {
         if (!textChanneltravaux ) {
           console.error("Salon introuvable ou non textuel.");
         } else {
-          const embed = sendText("travaux", {lieu, autre_infos}, interaction.member.displayName);
+          const embed = sendText("travaux", {lieutravaux, autre_infostravaux, dureetravaux, deviationtravaux}, interaction.member.displayName);
         
           textChanneltravaux.send({ embeds: [embed] })
             .then(() => console.log("Embed envoyé avec succès."))
