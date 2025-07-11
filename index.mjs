@@ -247,7 +247,7 @@ async function sendVocal(voiceChannelId, type, data){
       text = `Infos Traffic. Un patrouilleur nous a rapporter un accident au niveau de ${data.lieu}. Les secours sont en cours d’intervention. Ralentissements importants à prévoir. Information complémentaire: ${data.autre_infos}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
       break;
     case "travaux":
-      text = `Infos Traffic. La DIR vous informe de travaux sur la voie au niveau de ${data.lieu}. Nous vous demandons de prendre la déviation: ${data.deviation}. La durée des travaux est estimé a ${data.duree}. Information complémentaire: ${data.autre_infos}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
+      text = `Infos Traffic. La DIR vous informe de travaux sur la voie au niveau de ${data.lieutravaux}. Nous vous demandons de prendre la déviation: ${data.deviationtravaux}. La durée des travaux est estimé a ${data.dureetravaux}. Information complémentaire: ${data.autre_infostravaux}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
       break;
     default:
       return null;
@@ -316,7 +316,7 @@ function sendText(type, data, member){
       const travauxEmbed = new EmbedBuilder()
         .setTitle('📻 107.7 - Zone de Travaux')
         .setColor('Orange')
-        .setDescription(`🛠️ Travaux en cours au niveau de ${data.lieu}\n🚧 Déviation signalé: ${data.deviation}\n⏱️ Durée estimée : ${data.duree}\nInformation complémentaire: ${data.autre_infos}\nMerci de réduire votre vitesse.`)
+        .setDescription(`🛠️ Travaux en cours au niveau de ${data.lieutravaux}\n🚧 Déviation signalé: ${data.deviationtravaux}\n⏱️ Durée estimée : ${data.dureetravaux}\nInformation complémentaire: ${data.autre_infostravaux}\nMerci de réduire votre vitesse.`)
         .setFooter({ text: `Patrouilleur: ${member}, bot by Jonathan Scott` });
       return travauxEmbed;
     default:
