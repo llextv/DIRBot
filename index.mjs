@@ -249,6 +249,9 @@ async function sendVocal(voiceChannelId, type, data){
     case "travaux":
       text = `Infos Traffic. La DIR vous informe de travaux sur la voie au niveau de ${data.lieutravaux}. Nous vous demandons de prendre la déviation: ${data.deviationtravaux}. La durée des travaux est estimé a ${data.dureetravaux}. Information complémentaire: ${data.autre_infostravaux}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
       break;
+    case "traffic":
+      text = `Infos Traffic. L'état du traffic au niveau de ${data.lieutraffic} est définie comme ${data.etattraffic}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
+      break;
     default:
       return null;
   }
@@ -319,6 +322,13 @@ function sendText(type, data, member){
         .setDescription(`🛠️ Travaux en cours au niveau de ${data.lieutravaux}\n🚧 Déviation signalé: ${data.deviationtravaux}\n⏱️ Durée estimée : ${data.dureetravaux}\nInformation complémentaire: ${data.autre_infostravaux}\nMerci de réduire votre vitesse.`)
         .setFooter({ text: `Patrouilleur: ${member}, bot by Jonathan Scott` });
       return travauxEmbed;
+    case "traffic":
+      const trafficEmbed = new EmbedBuilder()
+        .setTitle('📻 107.7 - Infos Traffic')
+        .setColor('Yellow')
+        .setDescription(`🚗 Infos Traffic\n📍Lieu: ${data.lieutraffic}\n🛠️ État du traffic: ${data.etattraffic}`)
+        .setFooter({ text: `Patrouilleur: ${member}, bot by Jonathan Scott` });
+      return trafficEmbed;
     default:
       return null;
   }
@@ -583,6 +593,43 @@ client.on(Events.InteractionCreate, async interaction => {
               .then(() => console.log("Embed envoyé avec succès."))
               .catch(console.error);
             sendVocal(voiceIdTravaux, "travaux", {lieutravaux, autre_infostravaux, dureetravaux, deviationtravaux});
+            return interaction.editReply("107.7 - Infos envoyé a la radio !")
+          }
+        }
+      
+      case "radio-trafic":
+        await interaction.deferReply({ ephemeral: true });
+        if (!hasRole) {
+          return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
+        }
+        const voiceIdTraffic = VOICE_CHANNEL_ID;
+        const lieutraffic = interaction.options.getString('lieu');
+        const etattraffic = interaction.options.getString('deviation');
+
+        const channelIdtraffic = TEXT_CHANNEL_ID;
+        const guildInteracttraffic = interaction.guild;
+        const textChanneltraffic = guildInteracttraffic.channels.cache.get(channelIdtraffic);
+
+        const logsChannelIdtraffic = LOGS_CHANNEL_ID;
+        const logsChanneltraffic = guildInteracttraffic.channels.cache.get(logsChannelIdtraffic);
+        if (!textChanneltraffic ) {
+          console.error("Salon introuvable ou non textuel.");
+        } else {
+          const embed = sendText("traffic", {lieutraffic, etattraffic}, interaction.member.displayName);
+        
+          textChanneltraffic.send({ embeds: [embed] })
+            .then(() => console.log("Embed envoyé avec succès."))
+            .catch(console.error);
+
+          if (!logsChanneltraffic ) {
+            console.error("Salon introuvable ou non textuel.");
+          } else {
+            const embed = sendLogs(interaction.member.displayName, "traffic", new Date());
+          
+            logsChanneltraffic.send({ embeds: [embed] })
+              .then(() => console.log("Embed envoyé avec succès."))
+              .catch(console.error);
+            sendVocal(voiceIdTraffic, "traffic", {lieutraffic, etattraffic});
             return interaction.editReply("107.7 - Infos envoyé a la radio !")
           }
         }
