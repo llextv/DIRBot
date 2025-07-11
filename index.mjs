@@ -604,7 +604,7 @@ client.on(Events.InteractionCreate, async interaction => {
         }
         const voiceIdTraffic = VOICE_CHANNEL_ID;
         const lieutraffic = interaction.options.getString('lieu');
-        const etattraffic = interaction.options.getString('deviation');
+        const etattraffic = interaction.options.getString('etat');
 
         const channelIdtraffic = TEXT_CHANNEL_ID;
         const guildInteracttraffic = interaction.guild;
