@@ -247,7 +247,7 @@ async function sendVocal(voiceChannelId, type, data){
       text = `Infos Traffic. Un patrouilleur nous a rapporter un accident au niveau de ${data.lieu}. Les secours sont en cours d’intervention. Ralentissements importants à prévoir. Information complémentaire: ${data.autre_infos}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
       break;
     case "travaux":
-      text = `Infos Traffic. La DIR vous informe de travaux sur la voie au niveau de ${data.lieu}. Nous vous demandons de prendre la déviation: ${data.deviation}. La durée des travaux est estimé a ${data.duree}. Information complémentaire: ${data.autre_infos} Merci de votre vigilance. Et bonne route sur les ondes du LS 107.7`;
+      text = `Infos Traffic. La DIR vous informe de travaux sur la voie au niveau de ${data.lieu}. Nous vous demandons de prendre la déviation: ${data.deviation}. La durée des travaux est estimé a ${data.duree}. Information complémentaire: ${data.autre_infos}. Merci de votre vigilance. Et bonne route sur les ondes du LS 107 point 7`;
       break;
     default:
       return null;
@@ -517,15 +517,15 @@ client.on(Events.InteractionCreate, async interaction => {
       if (!hasRole) {
         return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
       }
-      const voiceId = VOICE_CHANNEL_ID;
-      const lieu = interaction.options.getString('lieu');
-      const autre_infos = interaction.options.getString('autre_infos');
-      const channelId = TEXT_CHANNEL_ID;
-      const guildInteract = interaction.guild;
-      const textChannel = guildInteract.channels.cache.get(channelId);
+      let voiceId = VOICE_CHANNEL_ID;
+      let lieu = interaction.options.getString('lieu');
+      let autre_infos = interaction.options.getString('autre_infos');
+      let channelId = TEXT_CHANNEL_ID;
+      let guildInteract = interaction.guild;
+      let textChannel = guildInteract.channels.cache.get(channelId);
 
-      const logsChannelId = LOGS_CHANNEL_ID;
-      const logsChannel = guildInteract.channels.cache.get(logsChannelId);
+      let logsChannelId = LOGS_CHANNEL_ID;
+      let logsChannel = guildInteract.channels.cache.get(logsChannelId);
       if (!textChannel ) {
         console.error("Salon introuvable ou non textuel.");
       } else {
@@ -548,6 +548,44 @@ client.on(Events.InteractionCreate, async interaction => {
         }
       }
       
+      case "radio-travaux":
+        await interaction.deferReply({ ephemeral: true });
+        if (!hasRole) {
+          return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
+        }
+        const voiceIdTravaux = VOICE_CHANNEL_ID;
+        const lieutravaux = interaction.options.getString('lieu');
+        const dureetravaux = interaction.options.getString('duree');
+        const deviationtravaux = interaction.options.getString('deviation');
+        const autre_infostravaux = interaction.options.getString('autre_infos');
+
+        const channelIdtravaux = TEXT_CHANNEL_ID;
+        const guildInteracttravaux = interaction.guild;
+        const textChanneltravaux = guildInteracttravaux.channels.cache.get(channelIdtravaux);
+
+        const logsChannelIdtravaux = LOGS_CHANNEL_ID;
+        const logsChanneltravaux = guildInteracttravaux.channels.cache.get(logsChannelIdtravaux);
+        if (!textChanneltravaux ) {
+          console.error("Salon introuvable ou non textuel.");
+        } else {
+          const embed = sendText("travaux", {lieu, autre_infos}, interaction.member.displayName);
+        
+          textChanneltravaux.send({ embeds: [embed] })
+            .then(() => console.log("Embed envoyé avec succès."))
+            .catch(console.error);
+
+          if (!logsChanneltravaux ) {
+            console.error("Salon introuvable ou non textuel.");
+          } else {
+            const embed = sendLogs(interaction.member.displayName, "travaux", new Date());
+          
+            logsChanneltravaux.send({ embeds: [embed] })
+              .then(() => console.log("Embed envoyé avec succès."))
+              .catch(console.error);
+            sendVocal(voiceIdTravaux, "travaux", {lieutravaux, autre_infostravaux, dureetravaux, deviationtravaux});
+            return interaction.editReply("107.7 - Infos envoyé a la radio !")
+          }
+        }
       
     default:
       break;
