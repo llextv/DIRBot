@@ -256,7 +256,7 @@ async function sendVocal(voiceChannelId, type, data){
 
   const textOral = new gTTS(text, 'fr');
   const filePath = './text.mp3';
-  speech.save(filePath, async function (err) {
+  textOral.save(filePath, async function (err) {
       if (err) return console.error(err);
   
       const connection = joinVoiceChannel({
