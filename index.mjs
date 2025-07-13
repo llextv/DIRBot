@@ -580,7 +580,7 @@ client.on(Events.InteractionCreate, async interaction => {
           permissions: [] 
         });
         const newRolechatSecureAccess = await guild.roles.create({
-          name: adminRoleName,
+          name: chatSecureAccess,
           color: '#FFD700',
           reason: 'Rôle pour répondre au messages de la zone de chat sécurisé',
           permissions: [] 
