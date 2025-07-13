@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits, REST, Routes, EmbedBuilder, ChannelType } from 'discord.js';
+import { Client, Events, GatewayIntentBits, REST, Routes, EmbedBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } from '@discordjs/voice';
 import gTTS from 'gtts';
 import fs from 'fs';
@@ -16,6 +16,18 @@ const commands = [
   {
     name: 'setup-radio',
     description: 'Setup le channel audio de la radio',
+    options: [
+      {
+        name: 'channelid',
+        description: 'Id du channel',
+        type: 3,
+        required: true,
+      },
+    ]
+  },
+  {
+    name: 'setup-finances',
+    description: 'Setup le channel finances du bot',
     options: [
       {
         name: 'channelid',
@@ -199,7 +211,7 @@ const commands = [
     ]
   },
   {
-    name: 'remorquage',
+    name: 'radio-remorquage',
     description: 'Annonce un remorquage',
     options: [
       {
@@ -218,6 +230,30 @@ const commands = [
           { name: 'Terminé', value: 'termine' },
         ]
       }
+    ]
+  },
+  {
+    name: 'etat-finances',
+    description: 'Fait un etat actuel des finances',
+    options: [
+      {
+        name: 'valeur',
+        description: 'Valeur des finances',
+        type: 3,
+        required: true,
+      },
+    ]
+  },
+  {
+    name: 'secure-chat-create',
+    description: 'Crée un chat "dit sécurisé" (avec les chat-member)',
+    options: [
+      {
+        name: 'nom',
+        description: 'Quelle est votre entité (nom-prénom) ou entreprise (police, fourrière ...)',
+        type: 3,
+        required: true,
+      },
     ]
   },
 ];
@@ -381,6 +417,7 @@ const client = new Client({ intents: [
   GatewayIntentBits.GuildMembers,
 ] });
 
+
 client.on(Events.ClientReady, readyClient => {
   console.log(`Logged ${readyClient.user.tag}!`);
 });
@@ -417,6 +454,12 @@ client.on(Events.InteractionCreate, async interaction => {
   }else{
     LOGS_CHANNEL_ID = guildConfig.get("logschannel");
   }
+
+  if(guildConfig.get("financeschannel") == undefined){
+    FINANCES_CHANNEL_ID = "";
+  }else{
+    FINANCES_CHANNEL_ID = guildConfig.get("financeschannel");
+  }
   
   const member = interaction.member;
   const hasRole = member.roles.cache.some(role => role.name === "Agent 107.7");
@@ -440,6 +483,22 @@ client.on(Events.InteractionCreate, async interaction => {
         config.set(guildId, new Map());
       }
       config.get(guildId).set("voicechannel", channelID);
+      saveConfig(config);
+      return interaction.editReply("Config modifié avec succès");
+
+    case "setup-finances":
+      await interaction.deferReply({ ephemeral: true });
+      if (!hasAdminRole) {
+        return interaction.editReply({ content: "Tu n'as pas la permission de modifier cela." });
+      }
+      const financeChanel = interaction.options.getString('channelid');
+      if (!financeChanel) {
+        return interaction.editReply("Erreur financeChanel = undefined");
+      }
+      if (!config.has(guildId)) {
+        config.set(guildId, new Map());
+      }
+      config.get(guildId).set("financeschannel", financeChanel);
       saveConfig(config);
       return interaction.editReply("Config modifié avec succès");
 
@@ -483,10 +542,12 @@ client.on(Events.InteractionCreate, async interaction => {
       }
       const roleName = "Agent 107.7";
       const adminRoleName = "Admin 107.7";
+      const chatSecureAccess = "Chat Secure Access";
       const guild = interaction.guild;
 
       let existingRole = guild.roles.cache.find(role => role.name === roleName);
       let existingRoleAdmin = guild.roles.cache.find(role => role.name === adminRoleName);
+      let existingchatSecureAccess = guild.roles.cache.find(role => role.name === chatSecureAccess);
 
       if (existingRole) {
         return interaction.editReply({
@@ -495,7 +556,12 @@ client.on(Events.InteractionCreate, async interaction => {
       }
       if (existingRoleAdmin) {
         return interaction.editReply({
-          content: `Rôle **${existingRoleAdmin}** existe deja.`,
+          content: `Rôle **${adminRoleName}** existe deja.`,
+        });
+      }
+      if (existingchatSecureAccess) {
+        return interaction.editReply({
+          content: `Rôle **${chatSecureAccess}** existe deja.`,
         });
       }
 
@@ -512,9 +578,15 @@ client.on(Events.InteractionCreate, async interaction => {
           reason: 'Rôle pour administrer avec 107.7 bot',
           permissions: [] 
         });
+        const newRolechatSecureAccess = await guild.roles.create({
+          name: adminRoleName,
+          color: '#FFD700',
+          reason: 'Rôle pour répondre au messages de la zone de chat sécurisé',
+          permissions: [] 
+        });
       
         return interaction.editReply({
-          content: `Role **${newRole.name}** et **${newRoleAdmin.name}** crées avec succes`,});
+          content: `Role **${newRole.name}** et **${newRoleAdmin.name}** et ${newRolechatSecureAccess.name} crées avec succes`,});
       } catch (error) {
         console.error('Erreur lors de la création du role :', error);
         return interaction.editReply({
@@ -634,7 +706,58 @@ client.on(Events.InteractionCreate, async interaction => {
             return interaction.editReply("107.7 - Infos envoyé a la radio !")
           }
         }
-      
+    
+    case "etat-finances":
+      const valueFinance = interaction.options.getString('valeur');
+      const financeChannel = FINANCES_CHANNEL_ID;
+
+      const financesEmbed = new EmbedBuilder()
+        .setTitle(`DIR - Finances`)
+        .setColor('yellow')
+        .setDescription(`L'état des finances de la DIR est de ${valueFinance}€`)
+        .setFooter({ text: `Mis a jour le ${new Date() }bot by Jonathan Scott` });
+      financeChannel.send({ embeds: [financesEmbed] })
+        .then(() => console.log("Embed envoyé avec succès."))
+        .catch(console.error);
+    
+    case "secure-chat-create":
+        const channelName = interaction.options.getString('nom');
+        const guild_interact = interaction.guild;
+        const memberRole = guild_interact.roles.cache.find(role => role.name.toLowerCase() === 'Chat Secure Access');
+        if (!memberRole) {
+          return interaction.reply({ content: "Rôle member introuvable", ephemeral: true });
+        }
+        const permissions = [
+          {
+            id: guild.roles.everyone.id, 
+            deny: [PermissionFlagsBits.ViewChannel],
+          },
+          {
+            id: member.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+          },
+          {
+            id: memberRole.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+          }
+        ];
+        const channel = await guild.channels.create({
+          name: channelName,
+          type: ChannelType.GuildText,
+          permissionOverwrites: permissions,
+          reason: `Créé par ${member.user.tag}`
+        });
+        let logChannelID = LOGS_CHANNEL_ID;
+        let channelLogs = guildInteract.channels.cache.get(logChannelID);
+        const logEmbed = new EmbedBuilder()
+          .setTitle('DIR BOT - Logs')
+          .setColor('Red')
+          .setDescription(`Logs DIR Chat - ${member.user.displayName} a crée le channel ${channel} à ${new Date()}`);
+        channelLogs.send({ embeds: [logEmbed] })
+            .then(() => console.log("Embed envoyé avec succès."))
+            .catch(console.error);
+        await interaction.reply({ content: `Salon ${channel} créé !`, ephemeral: true });
+        
     default:
       break;
   };
