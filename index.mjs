@@ -426,6 +426,7 @@ client.on(Events.InteractionCreate, async interaction => {
   let VOICE_CHANNEL_ID;
   let TEXT_CHANNEL_ID;
   let LOGS_CHANNEL_ID;
+  let FINANCES_CHANNEL_ID;
 
   if (!interaction.isChatInputCommand()) return;
   const guildId = interaction.guildId;
@@ -757,7 +758,7 @@ client.on(Events.InteractionCreate, async interaction => {
             .then(() => console.log("Embed envoyé avec succès."))
             .catch(console.error);
         await interaction.reply({ content: `Salon ${channel} créé !`, ephemeral: true });
-        
+
     default:
       break;
   };
