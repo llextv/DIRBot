@@ -714,7 +714,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       const financesEmbed = new EmbedBuilder()
         .setTitle(`DIR - Finances`)
-        .setColor('yellow')
+        .setColor('#FFD700')
         .setDescription(`L'état des finances de la DIR est de ${valueFinance}€`)
         .setFooter({ text: `Mis a jour le ${new Date() }bot by Jonathan Scott` });
       financeChannel.send({ embeds: [financesEmbed] })
