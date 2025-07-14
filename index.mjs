@@ -710,7 +710,9 @@ client.on(Events.InteractionCreate, async interaction => {
     
     case "etat-finances":
       const valueFinance = interaction.options.getString('valeur');
-      const financeChannel = FINANCES_CHANNEL_ID;
+      const financeChannelID = FINANCES_CHANNEL_ID;
+      const financeGuild = interaction.guild;
+      const financeChannel = financeGuild.channels.cache.get(financeChannelID);
 
       const financesEmbed = new EmbedBuilder()
         .setTitle(`DIR - Finances`)
