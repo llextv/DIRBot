@@ -1,6 +1,7 @@
-import { Client, Events, GatewayIntentBits, REST, Routes, EmbedBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { Client, Events, GatewayIntentBits, REST, Routes, EmbedBuilder, ChannelType, PermissionFlagsBits,ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuBuilder, InteractionType } from 'discord.js';
 import { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } from '@discordjs/voice';
 import gTTS from 'gtts';
+import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import 'dotenv/config';
 
@@ -28,6 +29,18 @@ const commands = [
   {
     name: 'setup-finances',
     description: 'Setup le channel finances du bot',
+    options: [
+      {
+        name: 'channelid',
+        description: 'Id du channel',
+        type: 3,
+        required: true,
+      },
+    ]
+  },
+  {
+    name: 'setup-commandes',
+    description: 'Setup le channel commandes du bot',
     options: [
       {
         name: 'channelid',
@@ -256,11 +269,171 @@ const commands = [
       },
     ]
   },
+  {
+    name: "verif-dir",
+    description: 'Verifier votre présence sur le discord DIR.'
+  },
+  {
+    name: "setup-pin",
+    description: 'Setup le code client pour les recrutement FA.'
+  },
+  {
+    name: "commande",
+    description: "Passer une nouvelle commande a la DIR."
+  },
+  {
+    name: "commande-prendre",
+    description: "Permet a un agent de prendre une commande.",
+    options: [
+      {
+        name: 'commandid',
+        description: "Entrée l'id de la commande a prendre en charge.",
+        type: 3,
+        required: true,
+      },
+    ]
+  },
+  {
+    name: "commande-locker",
+    description: "Emet le code du locker de récupération DIR",
+    options: [
+      {
+        name: 'commandid',
+        description: "Entrée l'id de la commande.",
+        type: 3,
+        required: true,
+      },
+      {
+        name: 'depotcasier',
+        description: "Entrée le casier dans lequel la commande a été déposé.",
+        type: 3,
+        required: true,
+        choices: [
+          { name: 'A1', value: 'A1' },
+          { name: 'A2', value: 'A2' },
+          { name: 'B1', value: 'B1' },
+          { name: 'B2', value: 'B2' },
+          { name: 'C1', value: 'C1' },
+          { name: 'C2', value: 'C2' },
+        ]
+      },
+    ]
+  },
+  {
+    name: "commande-finish",
+    description: "Marque une commande comme finish",
+    options: [
+      {
+        name: 'commandid',
+        description: "Entrée l'id de la commande.",
+        type: 3,
+        required: true,
+      },
+    ]
+  },
+  {
+    name: "commande-delete",
+    description: "Delete une commande",
+    options: [
+      {
+        name: 'commandid',
+        description: "Entrée l'id de la commande.",
+        type: 3,
+        required: true,
+      },
+    ]
+  }
 ];
 
-const CONFIG_FILE = "config.json";
+const catalogue = {
+  1: { nom: "Abri Bus", prix: 31596 },
+  2: { nom: "Abri Bus 2", prix: 35996 },
+  3: { nom: "Balise Blanche", prix: 796 },
+  4: { nom: "Balise de chantier", prix: 40 },
+  5: { nom: "Balise de guidage", prix: 796 },
+  6: { nom: "Balise Rouge", prix: 796 },
+  7: { nom: "Barrière", prix: 196 },
+  8: { nom: "Balise de chantier", prix: 196 },
+  9: { nom: "Balise de chantier 2", prix: 236 },
+  10: { nom: "Barrière de chantier demi-pleine", prix: 196 },
+};
 
-function sendLogs(member, type, time){
+const CONFIG_FILE = "config.json";
+const COOLDOWN_FILE = "cooldowns.json";
+const DB_FILE = "DB.json"
+
+function creerPDF(items, filePath, nom) {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  doc.pipe(fs.createWriteStream(filePath));
+
+  doc.image('logo.png', 450, 30, { width: 100 });
+  doc.fontSize(24).text("DEVIS DIR", { align: 'center' });
+  doc.moveDown();
+
+  doc.fontSize(12).text(`Devis`, { align: 'left' });
+  doc.text(`Date du devis: ${new Date().toLocaleDateString()}`);
+  doc.text("Validité: 1 mois");
+  doc.moveDown();
+
+  doc.fontSize(12).text("DIR - Représenté par Slarin SCOTT", { align: 'left' });
+  doc.text("Amboise, 20");
+  doc.moveDown();
+  doc.text(`À L'ATTENTION DE: M. ${nom}`);
+  doc.moveDown(2);
+
+  doc.fontSize(10);
+  doc.text('DESCRIPTION', 50, 300);
+  doc.text('PRIX', 300, 300);
+  doc.text('QUANTITÉ', 400, 300);
+  doc.text('TOTAL', 500, 300);
+
+  doc.moveTo(50, 315).lineTo(550, 315).stroke();
+
+  let y = 330;
+  let total = 0;
+
+  items.forEach((item) => {
+    const { nom, prixUnitaire, quantite, prixTotal } = item;
+    total += prixTotal;
+
+    doc.text(nom, 50, y);
+    doc.text(`${prixUnitaire.toFixed(2)} €`, 300, y);
+    doc.text(`${quantite}`, 400, y);
+    doc.text(`${prixTotal.toFixed(2)} €`, 500, y);
+    y += 20;
+  });
+
+  doc.moveTo(50, y).lineTo(550, y).stroke();
+
+  y += 30;
+  doc.text(`Sous-total : ${total.toFixed(2)} €`, 400, y);
+  doc.text(`TVA (20%) : Offerte`);
+  doc.text(`TOTAL : ${total.toFixed(2)} €`, 400, y + 60);
+  
+  doc.moveDown(3);
+  doc.fontSize(10).text("Conditions générales : Le paiement sera dû sous un mois.", 50, y + 90);
+  doc.text("Slarin SCOTT (PDG DIR)", 50, y + 150);
+  doc.moveTo(50, y + 170).lineTo(200, y + 170).stroke();
+  doc.moveTo(400, y + 170).lineTo(550, y + 170).stroke();
+
+  doc.end();
+}
+
+
+function loadCooldowns() {
+  try {
+    if (!fs.existsSync(COOLDOWN_FILE)) return {};
+    return JSON.parse(fs.readFileSync(COOLDOWN_FILE, "utf-8"));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCooldowns(obj) {
+  fs.writeFileSync(COOLDOWN_FILE, JSON.stringify(obj, null, 2));
+}
+
+function sendLogs(member, type, time){  
   const logEmbed = new EmbedBuilder()
     .setTitle('📻 107.7 - Logs')
     .setColor('Red')
@@ -398,7 +571,30 @@ function saveConfig(map) {
 
 const config = configLoad();
 
+function cmdLoad(){
+  try{
+    const data = fs.readFileSync(DB_FILE, 'utf-8');
+    const raw = JSON.parse(data);
+    const map = new Map();
+    for (const [guildId, cmd] of Object.entries(raw)) {
+      map.set(guildId, new Map(Object.entries(cmd)));
+    }
+    return map;
+  }catch(error){
+    console.error("Erreur de chargement des commandes :", error);
+    return new Map();
+  }
+}
 
+function saveCmd(map) {
+  const obj = {};
+  for (const [guildId, cmd] of map.entries()) {
+    obj[guildId] = Object.fromEntries(cmd);
+  }
+  fs.writeFileSync(DB_FILE, JSON.stringify(obj, null, 2));
+}
+
+const cmd_base = cmdLoad();
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
@@ -421,12 +617,16 @@ const client = new Client({ intents: [
 client.on(Events.ClientReady, readyClient => {
   console.log(`Logged ${readyClient.user.tag}!`);
 });
-
+let COMMANDES_CHANNEL_ID;
 client.on(Events.InteractionCreate, async interaction => {
+  let pin1;
+  let pin2;
+  let pin3;
   let VOICE_CHANNEL_ID;
   let TEXT_CHANNEL_ID;
   let LOGS_CHANNEL_ID;
   let FINANCES_CHANNEL_ID;
+  
 
   if (!interaction.isChatInputCommand()) return;
   const guildId = interaction.guildId;
@@ -461,7 +661,13 @@ client.on(Events.InteractionCreate, async interaction => {
   }else{
     FINANCES_CHANNEL_ID = guildConfig.get("financeschannel");
   }
-  
+
+  if(guildConfig.get("commandeChannel") == undefined){
+    COMMANDES_CHANNEL_ID = "";
+  }else{
+    COMMANDES_CHANNEL_ID = guildConfig.get("commandeChannel");
+  }
+
   const member = interaction.member;
   const hasRole = member.roles.cache.some(role => role.name === "Agent 107.7");
   const hasAdminRole = member.roles.cache.some(role => role.name === "Admin 107.7");
@@ -503,6 +709,21 @@ client.on(Events.InteractionCreate, async interaction => {
       saveConfig(config);
       return interaction.editReply("Config modifié avec succès");
 
+    case "setup-commandes":
+      await interaction.deferReply({ ephemeral: true });
+      if (!hasAdminRole) {
+        return interaction.editReply({ content: "Tu n'as pas la permission de modifier cela." });
+      }
+      const commandeChannel = interaction.options.getString('channelid');
+      if (!commandeChannel) {
+        return interaction.editReply("Erreur commandeChannel = undefined");
+      }
+      if (!config.has(guildId)) {
+        config.set(guildId, new Map());
+      }
+      config.get(guildId).set("commandeChannel", commandeChannel);
+      saveConfig(config);
+      return interaction.editReply("Config modifié avec succès");
     case "setup-text":
       await interaction.deferReply({ ephemeral: true });
       if (!hasAdminRole) {
@@ -686,7 +907,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const logsChannelIdtraffic = LOGS_CHANNEL_ID;
         const logsChanneltraffic = guildInteracttraffic.channels.cache.get(logsChannelIdtraffic);
-        if (!textChanneltraffic ) {
+        if (!textChanneltraffic) {
           console.error("Salon introuvable ou non textuel.");
         } else {
           const embed = sendText("traffic", {lieutraffic, etattraffic}, interaction.member.displayName);
@@ -724,46 +945,434 @@ client.on(Events.InteractionCreate, async interaction => {
         .catch(console.error);
     
     case "secure-chat-create":
-        const channelName = interaction.options.getString('nom');
-        const guild_interact = interaction.guild;
-        const memberRole = guild_interact.roles.cache.find(role => role.name.toLowerCase() === 'Chat Secure Access');
-        if (!memberRole) {
-          return interaction.reply({ content: "Rôle member introuvable", ephemeral: true });
-        }
-        const permissions = [
-          {
-            id: guild.roles.everyone.id, 
-            deny: [PermissionFlagsBits.ViewChannel],
-          },
-          {
-            id: member.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-          },
-          {
-            id: memberRole.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-          }
-        ];
-        const channel = await guild.channels.create({
-          name: channelName,
-          type: ChannelType.GuildText,
-          permissionOverwrites: permissions,
-          reason: `Créé par ${member.user.tag}`
-        });
-        let logChannelID = LOGS_CHANNEL_ID;
-        let channelLogs = guildInteract.channels.cache.get(logChannelID);
-        const logEmbed = new EmbedBuilder()
-          .setTitle('DIR BOT - Logs')
-          .setColor('Red')
-          .setDescription(`Logs DIR Chat - ${member.user.displayName} a crée le channel ${channel} à ${new Date()}`);
-        channelLogs.send({ embeds: [logEmbed] })
-            .then(() => console.log("Embed envoyé avec succès."))
-            .catch(console.error);
-        await interaction.reply({ content: `Salon ${channel} créé !`, ephemeral: true });
+      const logsSecureChat = LOGS_CHANNEL_ID;
+      const channelName = interaction.options.getString('nom');
+      const guild_interact = interaction.guild;
+      
+      const cooldowns = loadCooldowns();
+      const userId = member.id;
+      const now = Date.now();
+      const last = cooldowns[userId] || 0;
+      const COOLDOWN = 24 * 60 * 60 * 1000;
 
+      if (now - last < COOLDOWN) {
+        const remaining = Math.ceil((COOLDOWN - (now - last)) / (60 * 60 * 1000));
+        return interaction.reply({ content: `⏳ Tu dois attendre encore ${remaining}h avant de créer un nouveau chat sécurisé.`, ephemeral: true });
+      }
+
+      cooldowns[userId] = now;
+      saveCooldowns(cooldowns);
+
+      const memberRole = guild_interact.roles.cache.find(role => role.name.toLowerCase() === 'chat secure access');
+      let category = guild_interact.channels.cache.find(
+        c => c.type === ChannelType.GuildCategory && c.name.toUpperCase() === 'ZONE CHAT SÉCURISÉ'
+      );
+
+      if (!category) {
+        category = await guild_interact.channels.create({
+          name: 'ZONE CHAT SÉCURISÉ',
+          type: ChannelType.GuildCategory,
+          reason: 'Catégorie pour les chats sécurisés'
+        });
+      }
+      console.log(memberRole);
+      if (!memberRole) {
+        return interaction.reply({ content: "Rôle member introuvable", ephemeral: true });
+      }
+      const permissions = [
+        {
+          id: guild_interact.roles.everyone.id, 
+          deny: [PermissionFlagsBits.ViewChannel],
+        },
+        {
+          id: member.id,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+        },
+        {
+          id: memberRole.id,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+        }
+      ];
+      const channel = await guild_interact.channels.create({
+        name: channelName,
+        type: ChannelType.GuildText,
+        parent: category.id,
+        permissionOverwrites: permissions,
+        reason: `Créé par ${member.user.tag}`
+      });
+      console.log("logs: ", logsSecureChat);
+      let channelLogs = guild_interact.channels.cache.get(logsSecureChat);
+      console.log(channelLogs);
+      const logEmbed = new EmbedBuilder()
+        .setTitle('DIR BOT - Logs')
+        .setColor('Red')
+        .setDescription(`Logs DIR Chat - ${member.user.displayName} a crée le channel ${channel} à ${new Date()}`);
+      if (channelLogs) {
+        channelLogs.send({ embeds: [logEmbed] })
+          .then(() => console.log("Embed envoyé avec succès."))
+          .catch(console.error);
+      } else {
+        console.error("Salon de logs introuvable ou non textuel.");
+      }
+      await interaction.reply({ content: `Salon ${channel} créé !`, ephemeral: true });
+      break;
+    case "verif-dir":
+      interaction.reply(`**Voici les codes réponses à mettre dans le FA:**\n*Pin 1:* \`${pin1}\` *Pin 2:* \`${pin2}\` *Pin 3:* \`${pin3}\``)
+      break;
+    case "setup-pin":
+      pin1 = Math.floor(Math.random() * 100);
+      pin2 = Math.floor(Math.random() * 100);
+      pin3 = Math.floor(Math.random() * 100);
+      console.log(pin1,pin2,pin3);
+      await interaction.reply(`**Voici les codes réponses à mettre dans le FA:**\n*Pin 1:* \`${pin1}\` *Pin 2:* \`${pin2}\` *Pin 3:* \`${pin3}\``);
+      break;
+    case "commande":
+      // await interaction.deferReply({ ephemeral: true });
+      const logsCmd = LOGS_CHANNEL_ID;
+
+      const modal = new ModalBuilder()
+        .setCustomId('commandeModal')
+        .setTitle('Nouvelle commande DIR');
+
+      const nomInput = new TextInputBuilder()
+        .setCustomId('nom')
+        .setLabel('Nom / Prénom')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const telInput = new TextInputBuilder()
+        .setCustomId('tel')
+        .setLabel('Numéro de téléphone')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const entrepriseInput = new TextInputBuilder()
+        .setCustomId('entreprise')
+        .setLabel('Entreprise (optionnel)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+      const lieuInput = new TextInputBuilder()
+        .setCustomId('lieu')
+        .setLabel('Lieu résidence / siège social (optionnel)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+      const commandeInput = new TextInputBuilder()
+        .setCustomId('commande')
+        .setLabel("Produits")
+        .setPlaceholder("Format à respecter: ([ID de l'item dans le tableau DIR]x[Quantité]), (5x50), ...")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(nomInput),
+        new ActionRowBuilder().addComponents(telInput),
+        new ActionRowBuilder().addComponents(entrepriseInput),
+        new ActionRowBuilder().addComponents(lieuInput),
+        new ActionRowBuilder().addComponents(commandeInput)
+      );
+    
+      await interaction.showModal(modal);
+      break;
+
+    case "commande-prendre":
+      if (!hasRole) {
+        return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
+      }
+      const guild_interact_prendre = interaction.guild;
+      const commandeID = interaction.options.getString('commandid');
+      let commandePrendreChannel = guild_interact_prendre.channels.cache.get(COMMANDES_CHANNEL_ID);
+
+      if (!cmd_base.has(guild_interact_prendre.id)) {
+        return interaction.reply({ content: "Aucune commande trouvée pour ce serveur.", ephemeral: true });
+      }
+      const cmds = cmd_base.get(guild_interact_prendre.id).get("cmd") || [];
+      const commande = cmds.find(c => c.id.toString() === commandeID);
+      if (!commande) {
+        return interaction.reply({ content: "Commande introuvable.", ephemeral: true });
+      }
+      const cmd_salon = guild_interact_prendre.channels.cache.get(commande.ticket);
+
+      if (cmd_salon) {
+        console.log(interaction.user.id)
+        await cmd_salon.permissionOverwrites.edit(interaction.user.id, {
+          ViewChannel: true,
+          SendMessages: true,
+        }).catch(console.error);
+      }
+
+      let goodCMD = cmd_base.get(guild_interact_prendre.id).get("cmd").find(element => Number(element.id) === Number(commandeID));
+
+      if(goodCMD === undefined){
+        return interaction.reply({content: `Error: Undefined id`, ephemeral: true});
+      }
+
+      if(goodCMD.Etat === "Pris en charge"){
+        return interaction.reply({ content: `La commande a déjà été pris en charge par ${interaction.user.displayName}`, ephemeral: true });
+      }
+
+      goodCMD.Etat = "Pris en charge";
+      goodCMD.Attribution = interaction.user.id;
+      cmd_base.get(guild_interact_prendre.id).set("cmd", cmds);
+      saveCmd(cmd_base);
+
+      const embed = new EmbedBuilder()
+        .setTitle('DIR BOT - Prise en charge de commande')
+        .setColor('Green')
+        .setDescription(`<@${interaction.user.id}> a pris en charge votre commande n°${goodCMD.id}`);
+      cmd_salon.send({ embeds: [embed] })
+        .then(() => console.log("Embed envoyé avec succès."))
+        .catch(console.error);
+
+      const embed2 = new EmbedBuilder()
+        .setTitle('DIR BOT - Prise en charge de commande')
+        .setColor('Green')
+        .setDescription(`<@${interaction.user.id}> a pris en charge la commande n°${goodCMD.id}`);
+      commandePrendreChannel.send({ embeds: [embed2] })
+        .then(() => console.log("Embed envoyé avec succès."))
+        .catch(console.error);
+
+      return interaction.reply({ content: `<#${cmd_salon.id}>`, ephemeral: true });
+      break;
+    case "commande-locker":
+      if (!hasRole) {
+        return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
+      }
+      const guild_interact_locker = interaction.guild;
+      const commandeID_locker = interaction.options.getString('commandid');
+      const casier_locker = interaction.options.getString('depotcasier');
+
+
+      let lockerCMD = cmd_base.get(guild_interact_locker.id).get("cmd").find(element => Number(element.id) === Number(commandeID_locker));
+      const cmds_locker = cmd_base.get(guild_interact_locker.id).get("cmd") || [];
+      let locker_code;
+      if(lockerCMD.locker == "" || lockerCMD === undefined || lockerCMD === null){
+        locker_code = Math.floor(Math.random() * 9999);
+        lockerCMD.locker = locker_code;
+        lockerCMD.casier;
+        lockerCMD.Etat = "LOCKER";
+        cmd_base.get(guild_interact_locker.id).set("cmd", cmds_locker);
+        saveCmd(cmd_base);
+      }else{
+        locker_code = lockerCMD.locker;
+      }
+
+      const salon = guild_interact_locker.channels.cache.get(lockerCMD.ticket);
+
+      const locker_embed = new EmbedBuilder()
+        .setTitle('DIR BOT - Dépot de la commande au locker')
+        .setColor('Yellow')
+        .setDescription(`Le colis a été déposé dans le locker, vous pouvez désormais aller au dépot puis vous présenter devant le coffre fort numéro **${casier_locker}** avec le code **${locker_code}**`);
+      salon.send({ embeds: [locker_embed] })
+        .then(() => console.log("Embed envoyé avec succès."))
+        .catch(console.error);
+      return;
+      break;
+    case "commande-finish":
+      const guild_interact_finish = interaction.guild;
+      if (!hasRole) {
+        return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
+      }
+      const cmds_f = cmd_base.get(guild_interact_finish.id).get("cmd") || [];
+      const commandeID_finish = interaction.options.getString('commandid');
+      const commande_object = cmds_f.find(c => c.id.toString() === commandeID_finish);
+      if (!commande_object) {
+        return interaction.reply({ content: "Commande introuvable.", ephemeral: true });
+      }
+      
+      const cmd_salon_finish = guild_interact_finish.channels.cache.get(commande_object.ticket);
+      if (cmd_salon_finish) {
+        await cmd_salon_finish.permissionOverwrites.edit(interaction.user.id, {
+          ViewChannel: false,
+          SendMessages: false,
+        }).catch(console.error);
+      }
+      
+      const embedfinish = new EmbedBuilder()
+        .setTitle('DIR BOT - Avis et retour')
+        .setColor('Red')
+        .setDescription("Avant de cloturer votre commande, merci de répondre au question suivante a propos de votre commande.");
+      cmd_salon_finish.send({ embeds: [embedfinish] })
+        .then(() => console.log("Embed envoyé avec succès."))
+        .catch(console.error);
+
+      cmd_salon_finish.send("L'employé vous a t'il effectué un /bill ?");
+      cmd_salon_finish.send("(Optionnel) Comment a été votre experience de commande a la DIR ?");
+
+      break;
+    case "commande-delete":
+      if (!hasRole) {
+        return interaction.reply({ content: "Tu n'as pas la permission de faire cela.", ephemeral: true });
+      }
+      const guild_interact_del = interaction.guild;
+      const commandeID_del = interaction.options.getString('commandid');
+    
+      if (!cmd_base.has(guild_interact_del.id)) {
+        return interaction.reply({ content: "Aucune commande trouvée pour ce serveur.", ephemeral: true });
+      }
+      const cmds_del = cmd_base.get(guild_interact_del.id).get("cmd") || [];
+      const commandeToDelete = cmds_del.find(c => c.id.toString() === commandeID_del);
+    
+      if (!commandeToDelete) {
+        return interaction.reply({ content: "Commande introuvable.", ephemeral: true });
+      }
+    
+      const channel_delete = guild_interact_del.channels.cache.get(commandeToDelete.ticket);
+      if (channel_delete) {
+        await channel_delete.delete(">> DIR BOT - Fermeture de la commande");
+      }
+    
+      const newCmds = cmds_del.filter(c => c.id.toString() !== commandeID_del);
+      cmd_base.get(guild_interact_del.id).set("cmd", newCmds);
+      saveCmd(cmd_base);
+    
+      break;
     default:
       break;
   };
+});
+
+client.on(Events.InteractionCreate, async interaction => {
+  const guildConfig = config.get(interaction.guildId);
+  if(guildConfig.get("commandeChannel") == undefined){
+    COMMANDES_CHANNEL_ID = "";
+  }else{
+    COMMANDES_CHANNEL_ID = guildConfig.get("commandeChannel");
+  }
+  const guildId = interaction.guildId;
+  const guild = interaction.guild;
+  if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'commandeModal') {
+    const nom = interaction.fields.getTextInputValue('nom');
+    const tel = interaction.fields.getTextInputValue('tel');
+    const entreprise = interaction.fields.getTextInputValue('entreprise');
+    const lieu = interaction.fields.getTextInputValue('lieu');
+    const commande = interaction.fields.getTextInputValue('commande');
+    if (!cmd_base.has(guildId)) {
+      cmd_base.set(guildId, new Map());
+    }
+    const cmds = cmd_base.get(guildId).get("cmd") || [];
+    const timestamp = new Date();
+    
+    const memberRole = guild.roles.cache.find(role => role.name.toLowerCase() === 'chat secure access');
+
+    let category = guild.channels.cache.find(
+      c => c.type === ChannelType.GuildCategory && c.name.toUpperCase() === '--COMMANDES--'
+    );
+
+    //create ticket
+    if (!category) {
+      category = await guild.channels.create({
+        name: '--COMMANDES--',
+        type: ChannelType.GuildCategory,
+        reason: 'Catégorie pour les commandes'
+      });
+    }
+
+    if (!memberRole) {
+      return interaction.reply({ content: "Rôle member introuvable", ephemeral: true });
+    }
+
+    const permissions = [
+      {
+        id: guild.roles.everyone.id, 
+        deny: [PermissionFlagsBits.ViewChannel],
+      },
+      {
+        id: interaction.member.id,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+      },
+      {
+        id: memberRole.id,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+      }
+    ];
+
+    const channel = await guild.channels.create({
+      name: `${nom}-commandes`,
+      type: ChannelType.GuildText,
+      parent: category.id,
+      permissionOverwrites: permissions,
+      reason: `Créé par ${nom}`
+    });
+    const time = Date.now();
+    cmds.push({id: time, nom, tel, entreprise, lieu, commande, timestamp, "Etat": "En attente", "Attribution": "", "Payment": false, "ticket": channel.id, "locker": "", "casier": ""});
+    cmd_base.get(guildId).set("cmd", cmds);
+    saveCmd(cmd_base);
+    await interaction.reply({
+      content: `Commande reçue !\nNom: ${nom}\nTéléphone: ${tel}\nEntreprise: ${entreprise}\nLieu: ${lieu}\nChannel: <#${channel.id}>`,
+      ephemeral: true
+    });
+    const regex = /\((\d+)x(\d+)\)/g;
+    let match;
+    let total = 0;
+    let recap = [];
+
+    while ((match = regex.exec(commande)) !== null) {
+      const id = parseInt(match[1]);
+      const quantite = parseInt(match[2]);
+
+      const item = catalogue[id];
+      if (item) {
+        const prixTotal = item.prix * quantite;
+        total += prixTotal; 
+        recap.push({
+          nom: item.nom,
+          quantite,
+          prixUnitaire: item.prix,
+          prixTotal
+        });
+      } else {
+        recap.push({
+          nom: `Item inconnu (ID ${id})`,
+          quantite,
+          prixUnitaire: 0,
+          prixTotal: 0
+        });
+      }
+    }
+
+    console.log("🧾 Récapitulatif de la commande :\n");
+    let r = '';
+    recap.forEach(item => {
+      r += `- ${item.nom} x${item.quantite} ${item.prixUnitaire.toFixed(2)}€ = ${item.prixTotal.toFixed(2)}€ \n`
+      console.log(`- ${item.nom} x${item.quantite} ${item.prixUnitaire.toFixed(2)}€ = ${item.prixTotal.toFixed(2)}€`);
+    });
+
+    console.log(`\n💰 Total à payer : ${total.toFixed(2)}€`);
+
+
+    const embed = new EmbedBuilder()
+      .setTitle('DIR BOT - Nouvelle Commande')
+      .setColor('Red')
+      .setDescription(r);
+    channel.send({ embeds: [embed] })
+     .then(() => console.log("Embed envoyé avec succès."))
+     .catch(console.error);
+
+      const pdfPath = `devis_${Date.now()}.pdf`;
+      creerPDF(recap, pdfPath, nom);
+      setTimeout(() => {
+        channel.send({
+          content: `Voici votre devis basé sur la commande.`,
+          files: [pdfPath]
+        }).then(() => {
+          fs.unlinkSync(pdfPath);
+        });
+      }, 1000);
+    let commandePrendreChannel = guild.channels.cache.get(COMMANDES_CHANNEL_ID);
+    const embed2 = new EmbedBuilder()
+      .setTitle('DIR BOT - Suite de la commande')
+      .setColor('Red')
+      .setDescription(`Un employé va prendre en charge votre commande dans les plus bref delais, merci de votre patience`);
+    channel.send({embeds: [embed2]})
+
+    const embed3 = new EmbedBuilder()
+      .setTitle('DIR BOT - Nouvelles commandes')
+      .setColor('Red')
+      .setDescription(`Nouvelle commande ! Faite /commande-prendre ${time}`);
+    commandePrendreChannel.send({embeds: [embed3]})
+  }
 });
 
 client.login(TOKEN);

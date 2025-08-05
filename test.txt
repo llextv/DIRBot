@@ -1,0 +1,3 @@
+(1x500),(2x500)
+
+([ID]x[le nombre de fois que vous le voulez])
