@@ -277,72 +277,72 @@ const commands = [
     name: "setup-pin",
     description: 'Setup le code client pour les recrutement FA.'
   },
-  {
-    name: "commande",
-    description: "Passer une nouvelle commande a la DIR."
-  },
-  {
-    name: "commande-prendre",
-    description: "Permet a un agent de prendre une commande.",
-    options: [
-      {
-        name: 'commandid',
-        description: "Entrée l'id de la commande a prendre en charge.",
-        type: 3,
-        required: true,
-      },
-    ]
-  },
-  {
-    name: "commande-locker",
-    description: "Emet le code du locker de récupération DIR",
-    options: [
-      {
-        name: 'commandid',
-        description: "Entrée l'id de la commande.",
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'depotcasier',
-        description: "Entrée le casier dans lequel la commande a été déposé.",
-        type: 3,
-        required: true,
-        choices: [
-          { name: 'A1', value: 'A1' },
-          { name: 'A2', value: 'A2' },
-          { name: 'B1', value: 'B1' },
-          { name: 'B2', value: 'B2' },
-          { name: 'C1', value: 'C1' },
-          { name: 'C2', value: 'C2' },
-        ]
-      },
-    ]
-  },
-  {
-    name: "commande-finish",
-    description: "Marque une commande comme finish",
-    options: [
-      {
-        name: 'commandid',
-        description: "Entrée l'id de la commande.",
-        type: 3,
-        required: true,
-      },
-    ]
-  },
-  {
-    name: "commande-delete",
-    description: "Delete une commande",
-    options: [
-      {
-        name: 'commandid',
-        description: "Entrée l'id de la commande.",
-        type: 3,
-        required: true,
-      },
-    ]
-  }
+  // {
+  //   name: "commande",
+  //   description: "Passer une nouvelle commande a la DIR."
+  // },
+  // {
+  //   name: "commande-prendre",
+  //   description: "Permet a un agent de prendre une commande.",
+  //   options: [
+  //     {
+  //       name: 'commandid',
+  //       description: "Entrée l'id de la commande a prendre en charge.",
+  //       type: 3,
+  //       required: true,
+  //     },
+  //   ]
+  // },
+  // {
+  //   name: "commande-locker",
+  //   description: "Emet le code du locker de récupération DIR",
+  //   options: [
+  //     {
+  //       name: 'commandid',
+  //       description: "Entrée l'id de la commande.",
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'depotcasier',
+  //       description: "Entrée le casier dans lequel la commande a été déposé.",
+  //       type: 3,
+  //       required: true,
+  //       choices: [
+  //         { name: 'A1', value: 'A1' },
+  //         { name: 'A2', value: 'A2' },
+  //         { name: 'B1', value: 'B1' },
+  //         { name: 'B2', value: 'B2' },
+  //         { name: 'C1', value: 'C1' },
+  //         { name: 'C2', value: 'C2' },
+  //       ]
+  //     },
+  //   ]
+  // },
+  // {
+  //   name: "commande-finish",
+  //   description: "Marque une commande comme finish",
+  //   options: [
+  //     {
+  //       name: 'commandid',
+  //       description: "Entrée l'id de la commande.",
+  //       type: 3,
+  //       required: true,
+  //     },
+  //   ]
+  // },
+  // {
+  //   name: "commande-delete",
+  //   description: "Delete une commande",
+  //   options: [
+  //     {
+  //       name: 'commandid',
+  //       description: "Entrée l'id de la commande.",
+  //       type: 3,
+  //       required: true,
+  //     },
+  //   ]
+  // }
 ];
 
 const catalogue = {
@@ -1116,7 +1116,6 @@ client.on(Events.InteractionCreate, async interaction => {
       await interaction.reply(`**Voici les codes réponses à mettre dans le FA:**\n*Pin 1:* \`${pin1}\` *Pin 2:* \`${pin2}\` *Pin 3:* \`${pin3}\``);
       break;
     case "commande":
-      // await interaction.deferReply({ ephemeral: true });
       const logsCmd = LOGS_CHANNEL_ID;
 
       const modal = new ModalBuilder()
@@ -1167,7 +1166,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     case "commande-prendre":
       if (!hasRole) {
-        return interaction.editReply({ content: "Tu n'as pas la permission de faire cela." });
+        return interaction.reply({ content: "Tu n'as pas la permission de faire cela." });
       }
       const guild_interact_prendre = interaction.guild;
       const commandeID = interaction.options.getString('commandid');
@@ -1323,6 +1322,7 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+  await interaction.deferReply({ ephemeral: true});
   const guildConfig = config.get(interaction.guildId);
   if(guildConfig.get("commandeChannel") == undefined){
     COMMANDES_CHANNEL_ID = "";
@@ -1359,7 +1359,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (!memberRole) {
-      return interaction.reply({ content: "Rôle member introuvable", ephemeral: true });
+      return interaction.editReply({ content: "Rôle member introuvable", ephemeral: true });
     }
 
     const permissions = [
@@ -1388,7 +1388,7 @@ client.on(Events.InteractionCreate, async interaction => {
     cmds.push({id: time, nom, tel, entreprise, lieu, commande, timestamp, "Etat": "En attente", "Attribution": "", "Payment": false, "ticket": channel.id, "locker": "", "casier": ""});
     cmd_base.get(guildId).set("cmd", cmds);
     saveCmd(cmd_base);
-    await interaction.reply({
+    await interaction.editReply({
       content: `Commande reçue !\nNom: ${nom}\nTéléphone: ${tel}\nEntreprise: ${entreprise}\nLieu: ${lieu}\nChannel: <#${channel.id}>`,
       ephemeral: true
     });
