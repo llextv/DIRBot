@@ -74,24 +74,24 @@ const commands = [
       },
     ]
   },
-  {
-    name: 'radio',
-    description: 'Envoie un msg perso sur le channel audio',
-    options: [
-      {
-        name: 'titre',
-        description: 'Titre de l’annonce',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'message',
-        description: 'Message annoncé',
-        type: 3,
-        required: true,
-      }
-    ]
-  },
+  // {
+  //   name: 'radio',
+  //   description: 'Envoie un msg perso sur le channel audio',
+  //   options: [
+  //     {
+  //       name: 'titre',
+  //       description: 'Titre de l’annonce',
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'message',
+  //       description: 'Message annoncé',
+  //       type: 3,
+  //       required: true,
+  //     }
+  //   ]
+  // },
   {
     name: 'radio-accident',
     description: 'Annonce un accident sur un axe routier',
