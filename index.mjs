@@ -140,66 +140,66 @@ const commands = [
       }
     ]
   },
-  {
-    name: 'radio-ralentissement',
-    description: 'Annonce des ralentissement sur un axe routier',
-    options: [
-      {
-        name: 'lieu',
-        description: 'Localisation du ralentissement',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'duree',
-        description: 'Durée estimée (ex: 2 heures)',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'bis',
-        description: "Si itinéraire bis indiqué ici",
-        type: 3,
-        required: false,
-      },
-      {
-        name: 'autre_infos',
-        description: "Autre informations sur le ralentissement",
-        type: 3,
-        required: false,
-      }
-    ]
-  },
-  {
-    name: 'radio-barragedir',
-    description: 'Annonce un barrage de la DIR (route fermée, ...)',
-    options: [
-      {
-        name: 'lieu',
-        description: 'Localisation du barrage',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'duree',
-        description: 'Durée estimée (ex: 2 heures)',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'bis',
-        description: "Si itinéraire bis indiqué ici",
-        type: 3,
-        required: false,
-      },
-      {
-        name: 'autre_infos',
-        description: "Autre informations sur le barrage",
-        type: 3,
-        required: false,
-      }
-    ]
-  },
+  // {
+  //   name: 'radio-ralentissement',
+  //   description: 'Annonce des ralentissement sur un axe routier',
+  //   options: [
+  //     {
+  //       name: 'lieu',
+  //       description: 'Localisation du ralentissement',
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'duree',
+  //       description: 'Durée estimée (ex: 2 heures)',
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'bis',
+  //       description: "Si itinéraire bis indiqué ici",
+  //       type: 3,
+  //       required: false,
+  //     },
+  //     {
+  //       name: 'autre_infos',
+  //       description: "Autre informations sur le ralentissement",
+  //       type: 3,
+  //       required: false,
+  //     }
+  //   ]
+  // },
+  // {
+  //   name: 'radio-barragedir',
+  //   description: 'Annonce un barrage de la DIR (route fermée, ...)',
+  //   options: [
+  //     {
+  //       name: 'lieu',
+  //       description: 'Localisation du barrage',
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'duree',
+  //       description: 'Durée estimée (ex: 2 heures)',
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'bis',
+  //       description: "Si itinéraire bis indiqué ici",
+  //       type: 3,
+  //       required: false,
+  //     },
+  //     {
+  //       name: 'autre_infos',
+  //       description: "Autre informations sur le barrage",
+  //       type: 3,
+  //       required: false,
+  //     }
+  //   ]
+  // },
   {
     name: 'radio-trafic',
     description: 'Donne un état du trafic',
@@ -223,28 +223,28 @@ const commands = [
       }
     ]
   },
-  {
-    name: 'radio-remorquage',
-    description: 'Annonce un remorquage',
-    options: [
-      {
-        name: 'lieu',
-        description: 'Lieu du remorquage',
-        type: 3,
-        required: true,
-      },
-      {
-        name: 'statut',
-        description: 'En cours ou terminé',
-        type: 3,
-        required: true,
-        choices: [
-          { name: 'En cours', value: 'en_cours' },
-          { name: 'Terminé', value: 'termine' },
-        ]
-      }
-    ]
-  },
+  // {
+  //   name: 'radio-remorquage',
+  //   description: 'Annonce un remorquage',
+  //   options: [
+  //     {
+  //       name: 'lieu',
+  //       description: 'Lieu du remorquage',
+  //       type: 3,
+  //       required: true,
+  //     },
+  //     {
+  //       name: 'statut',
+  //       description: 'En cours ou terminé',
+  //       type: 3,
+  //       required: true,
+  //       choices: [
+  //         { name: 'En cours', value: 'en_cours' },
+  //         { name: 'Terminé', value: 'termine' },
+  //       ]
+  //     }
+  //   ]
+  // },
   {
     name: 'etat-finances',
     description: 'Fait un etat actuel des finances',
